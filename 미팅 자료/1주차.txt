@@ -1,0 +1,118 @@
+[1] 실시간 영상분석을 위한 최신 기술
+     Edge-Cloud Collaborative Systems for Live Video Analytics
+
+neural network 통함
+
+- on-device approach : 비디오가 캡쳐되는 기기 자체에서 처리하는 형식
+	자체에서 처리하기때문에 효과적, 네트워크와 상관 없어서 영향을 덜받음
+	프라이버스 우려가 적음
+	매우 큰 장점 = 네트워크 영향을 덜받음 - 안정적, 지속적으로
+한계점 : 단일모델의 execution 만 가능
+	   복잡한 task 는 무리가 됨, resolution이 낮은것만 빨리됨
+
+- edge-cloud collaborative : 데이터를 클라우드에 넘겨서, 클라우드가 처리한 후 기기로 다시 넘기는 형식
+	computing resources가 파워풀함, 네트워크가 발전되고있다. 우려 적어짐
+	advance in secure computing 우려가 적어지고 있다.
+	
+=> 어디서 처리를 하는것이 좋은건가?
+적재적소에 사용하면 좋음
+
+
+* Collaborative Inference
+  - on device가 가지는 한계점들을 극복해 줄 가능성이 있음
+	powerful computing resources - 20배정도 남
+	클라우드로넘길때 네트워크가 문제됨 - 네트워크에 대한 고민들이 많이 이루어지고 있음
+	프라이버시 concerns - 해결하기위한 다양한 노력
+=> 주목을 해봐야할만한 approach 이다.
+
+- 데이터를 보낼때 시간이 생각보다 오래걸림 
+processing latency benefit is quickly compromised by data transmission latency
+=> 핵심 문제 : 어떻게하면 효과적으로 보낼것인가?
+
+- approaches for collaborative inference
+- split inference approach : 처리를 구조화를 잘 하자. 
+	- Layer-aware Split Inference : vertically split
+		edge-only = large letency, energy consumption
+		cloud-only = network condition에 vulnerable 함
+		split = 둘을 잘나눠서 같이함 = fast, energy-efficient, robust
+		- NeuroSurgeon : Layer-wise Model Partitioning
+	어디서 잘라야 할까?
+		- Dyno: Intermediate Tensor Compression
+	
+	- Content-Aware Split Inference - horizantal split
+
+- DNN-aware compression approach : 데이터를 압축해서 보내자 
+	- hard objects -> high-quality
+	- easy objects -> 더 압축해서 low-quality
+	     * 어떻게 어렵고 쉬운지 아는지? Predictive vs. Reactive Adaptations 
+		Predictive - 과거의 frame을 참고하여 
+		Reactive Adaptations - 1)low-quality로 한번 보냄 
+					2)feedback(confidence 활용, 탐지 안되는 영역 다시하라고함)
+					3) high-quality로 다시 보냄
+  - DNN-Aware Codec : 사람이 덜 sensitive한 부분을 날렸었음. 압축할때 사람아닌 neural 활용한게 있어야 함
+	
+한계 극복 위해 : Video Coding for Machines 
+Prior
+비디오를 frame by frame 이미지의 연속으로 생각했었음
+지금까지는 각각 연구 
+Research Opportunities 기회들
+continuous vision inference 비디오를 가정하고 생각하면 할 수 있는것이 많다.
+통합적으로 compute & network 통합연구가 나와야 하지 않을까
+
+
+
+[2] 자연어처리 AI는 올바른 추론을 하는가? 
+Mitigating Shortcut Learning of NLP models
+
+1 - what is the shortcut learning problem?
+Reasearch trend - build large Dataset
+딥뉴럴 네트워크가 학습을 하는 과정에서 shortcut
+challenging한 환경에서는 오류가 많음 
+adversarial distracting sentence 겹치는 단어가 많은 문장을 추가하면 오류남
+
+2 - Why neural models learn shortcuts?
+왜 shortcut learning occur? Annotation artifacts => NLI task에서 많이 일어남
+NLI task : 두개의 문장 관계가 Entailment, Neutral, Contradiction인지 
+각각 클래스마다 발생하는 단어들 
+
+데이터 셋 제작 버전
+- shortcut version : 관련없는 부분을 지워내고, 맞추기 쉬운 예제들
+- Challenging version : complex comprehension skills 필요한 예제들
+
+
+3 - How to mitigate such problem for robust models?
+- annotation artifacts를 줄이기 위해 
+- Debiasing models - 모델링 관점에서
+	학습을 한 다음에 correlation을 
+
+- avoiding shortcuts in QA model - evidentially 이용
+problem = reasoning shortcut
+solution = training evidentaility
+	answerability : 주어진 문단이 정답을 포함 하는지
+	evidentaility = + 정답이 있더라도 증거가 있는지 모델이 판단해야 한다.
+
+데이터 셋 : 
+Evidence-negative set : 정답 포함하지만 증거가 없음
+Evidence-positive set : 정답과 증거 모두 있음
+
+증거가 충분할 때, 정답을 맞추게 하고
+증거가 없을 때 정답을 맞추지 못하게 한다.
+
+1. single-paragraphs 로만 train한 모델 => shortcut 학습이 됨
+2. evidence-negative set으로 regularization한 모델 
+	=> 증거가 없을 때 confidence가 0으로 가까워짐
+3. 최종 full 모델
+	biased layer - 
+	debiased layer - 후자의 layer에서 나온 확률과 decorrelated
+두개의 확률 분포가 멀어지게 함
+	Evidence-negative set에서 낮은 confidence를 유지하면서 
+	Evidence-positive set에서 confidence를 더 증가시킴
+
+
+
+
+
+
+
+
+
