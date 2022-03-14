@@ -109,6 +109,8 @@ Evidence-positive set : 정답과 증거 모두 있음
 	Evidence-positive set에서 confidence를 더 증가시킴
 
 
+[3] AI를 통한 주가 예측 Stock Prediction in AI
+- 금융
 
 
 
