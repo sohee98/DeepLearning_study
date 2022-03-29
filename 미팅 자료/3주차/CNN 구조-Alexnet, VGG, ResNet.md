@@ -6,27 +6,95 @@
 
 ## 1. Alexnet
 
-<img src="https://blog.kakaocdn.net/dn/PV4Qy/btqCFxGGoom/iTthgzuSyEXxTkC6E3af4k/img.png" alt="img" style="zoom:50%;" /><img src="https://blog.kakaocdn.net/dn/lceu6/btqCD9sNnpy/6numBkqx8OJTaBLAkPzaFk/img.png" alt="img" style="zoom: 67%;" />
+![image-20220329004225685](md-images/image-20220329004225685.png)![image-20220329010208676](md-images/image-20220329010208676.png)
+
+![img](https://t1.daumcdn.net/cfile/tistory/99FEB93C5C80B5192E)
 
 ![img](https://blog.kakaocdn.net/dn/J29tU/btq8avdCrY7/aIWPxEtLDWMEZidf4Hr9O1/img.png)
 
 * 최초로 제안된 거대한 크기의 CNN 아키텍처
+* 특징들
+  * Overlapping Pooling Layer : 필터를 겹치게 stride를 좁혀서 사용
+  * ReLu 활성함수 사용 : tanh에 비해 학습속도가 6배 빠름
+  * Local Response Normalization(LRN) 사용 : 활성화 함수를 적용하기 전에 미리 적용하여 함수의 결과값에서 더 좋은 일반화 결과를 도출. 
+    * 강하게 활성화된 뉴런의 주변 이웃들에 대해 normalization 실행.
+    * 이유 : 인접화소들을 억제시키고 특징을 부각시키기 위함 
+    * 정확도가 1.4% 정도 향상
+    * ReLU의 사용 => 매우 높은 하나의 픽셀값이 주변의 픽셀에 영향을 미치게 됨
+    * 방지하기 위해 다른 activation map의 같은 위치에 있는 픽셀끼리 정규화를 함
+  * Dropout 사용 : FC 레이어에서 50%확률의 Dropout 적용. Overfitting을 줄여줌.
+    * Overfitting : 컴퓨터가 주어진 데이터에만 너무 최적화되어서 새로운 데이터에 대한 예측을 못하는 현상. <-> Underfitting
+  * Training on Multiple GPUs
+  * Data Augmentation : 동일한 이미지들을 조금씩 변형시켜가며 학습. 데이터양을 늘림.
+    * mirroring, Random Crops, PCA Color Augmentation기법 등
+    * 데이터 양을 2048배 늘림
 * [Input layer - Conv1 - MaxPool1 - Norm1 - Conv2 - MaxPool2 - Norm2 - Conv3 - Conv4 - Conv5 - Maxpool3 - FC1- FC2 - Output layer] 
-* Convolution layer : 5개
-* Pooling layer : 3개
+* 8개의 레이어
+  * Convolution layer : 5개
+  * Pooling layer : 3개
 * Local Response Normalization layer : 2개
 * Fully-connected layer : 3개
 * 뉴런 약 65만개
 * 파라미터 약 6200만개
 * 연산량 약 6억 3000만개
+* Pooling Layer 역할 : 처리되는 데이터의 크기를 줄임. 크기를 줄이며 특정 feature 강조
 
 ![img](https://blog.kakaocdn.net/dn/QI2jJ/btq1xmhigD0/ndO9JG4Yty5doDrAKylmh0/img.png)
 
-* 입력 : 227 * 227 * 3 크기 이미지
-* 첫번째 layer : 96개의 11*11 필터가 stride 4로 적용 => 출력 : `55*55*96` `(<=(227-11)/4+1=55)`
+<img src="md-images/image-20220328121008752.png" alt="image-20220328121008752" style="zoom: 67%;" />
+
+* 입력 : 227 * 227 * 3 이미지 (채널 = 3 (RGB) )
+
+* 첫번째 layer (채널 96개) => 출력 : `55*55*96` `(<= (227-11)/4+1=55)`
+  
+  * filter : 96개의 `11*11*3` 필터가 stride 4로 적용
   * 파라미터 : `(11*11*3)*96 = 35K`
-  * POOL 1 : 3*3필터 stride 2로 적용 => 출력 볼륨 : `(55-3)/2+1 = 27`
-  * 
+  * POOL 1 : 3*3필터 stride 2로 적용 =>  `크기 : 55 -> 27` `(<= (55-3)/2+1 = 27)`
+  * activation : ReLU + LRN + MaxPooling
+  
+* 2nd layer(Conv) (채널 : 96 -> 256개) => 출력 : `27*27*256` 
+
+   * filter : 5x5x48. 256개 
+   * POOL 2 : 3*3 필터 stride 2 `크기 : 27 -> 13` `(<= (27-3)/2+1=13)`
+   * activation : ReLU + LRN + MaxPooling
+
+* 3rd layer(Conv) (채널 : 256 -> 256개) => 출력 : `13*13*256` 
+
+   \- filter : 3x3x256. 384개 
+
+   \- activation : ReLU
+
+   \- 유일하게 이전 layer에서 모든 kernel map들과 연결굄
+
+* 4th layer(Conv) (채널 : 256 -> 384개) => 출력 : `13*13*384` 
+
+   \- filter : 3x3x192. 384개
+
+   \- activation : ReLU
+
+* 5th layer(Conv) (채널 : 384 -> 256개) => 출력 : `6*6*256` 
+
+   \- filter : 3x3x192. 256개
+
+   \- activation : ReLU + MaxPooling `크기 : 13 -> 6`
+
+* 6th layer(FC)
+
+   \- Neurons : 4096
+
+   \- activation: ReLU
+
+* 7th layer(FC)
+
+   \- Neurons : 4096
+
+   \- activation : ReLU
+
+* 8th layer(FC)
+
+   \- Neurons : 1000
+
+   \- activation : Softmax
 
 ```python
 import torch
@@ -65,6 +133,7 @@ class AlexNet(nn.Module):
         	# ReLU함수 사용
         nn.LocalResponseNorm(size=5, alpha=0.0001, beta=0.75, k=2),  
         	# NORM1 : 논문의 LRN 파라미터 그대로 지정 
+        	# 정규화 k=2, n=5, 알파=0.0001, 베타=0.75
         nn.MaxPool2d(kernel_size=3, stride=2),
         	# 풀링layer : 필터크기=3*3, stride=2
         
@@ -101,6 +170,7 @@ class AlexNet(nn.Module):
         # fc1
         nn.Dropout(p=0.5, inplace=True),
         nn.Linear(in_features=(256 * 6 * 6), out_features=4096),
+        	# 선형 변환 : input=256*6*6, output=4096
         nn.ReLU(inplace=True).
         # fc2
         nn.Dropout(p=0.5, inplace=True),
@@ -108,6 +178,7 @@ class AlexNet(nn.Module):
         nn.ReLU(inplace=True),
         nn.Linear(4096, num_classes),
     )
+    
     # bias, weight 초기화 
     def init_bias_weights(self):
       for layer in self.net:
@@ -173,49 +244,26 @@ if __name__== '__main__':
       optimizer.step()  # parameter update
 ```
 
-* MNIST
-
-  ```python
-  import torch
-  from torchvision import datasets, transforms
-  
-  batch_size = 1
-  train_loader = torch.utils.data.DataLoader(
-      datasets.MNIST(
-          root = "datasets/", # 현재 경로에 datasets/MNIST/ 를 생성 후 데이터를 저장한다.
-          train = True, # train 용도의 data 셋을 저장한다.
-          download = True,
-          transform = transforms.Compose([
-              transforms.ToTensor(), # tensor 타입으로 데이터 변경
-              transforms.Normalize(mean = (0.5,), std = (0.5,)) # data를 normalize 하기 위한 mean과 std 입력
-          ])
-      ),
-      batch_size=batch_size, 
-      shuffle=True
-  )
-  ```
-
-  ```python
-  image, label = next(iter(train_loader))
-  print(image.shape, label.shape)
-  # torch.Size([1, 1, 28, 28]) torch.Size([1])
-  ```
-
-  
-
 
 
 
 
 ## 2. VGG
 
+* 네트워크의 깊이를 깊게 조절하는 것이 CNN의 성능에 어떤 영향을 주는지 확인하고자 함
+
+  * 필터의 크기 3x3으로 설정, 64개로 합성곱 연산
+  * 3x3필터를 여러번 사용하는 방법은 이론적으로 5x5필터를 한번 사용하는 것과 동일한 성능이여야 하지만, 테스트한 결과 3x3 여러번사용이 더 좋은 성능을 보였다.
+    * 필터의 중첩이 활성화 함수 ReLU를 더 많이 사용, 최종적으로 정보를 분류하는 결정함수가 더 잘 학습하도록 영향을 끼침
+    * 학습해야할 파라미터의 수가 줄어들기 때문, 학습 속도에 긍정적 영향
+
 * 구조가 간단하지만 GoogleNet과 에러 0.1% 차이
+
+  * GoogleNet이 성능이 가장 좋지만 구조가 복잡하여 사용하기 어려움 
 
 * 작은 필터를 여러층으로 쌓는 ResNet의 모체
 
 * Small Filter Size & Deep Networks
-
-* 커널사이즈를 3*3으로 고정
 
 * AlexNet과 차이점
 
@@ -229,6 +277,7 @@ if __name__== '__main__':
 
   * Convolutional Layer를 3*3 필터, Padding=1로 원본크기에 변화를 주지 않음
   * Max-pooling을 사용해 사이즈를 절반으로 줄여나가면서 특징들을 추출
+    * kernel 2x2, stride 2로 이미지를 절반으로 resize
   * 각각의 Conv Layer뒤에 활성화 함수로 ReLU를 사용
   * FC Layer로 4096, 4096, num_classes=1000으로 3개의 층
   * 중간중간 Dropout 0.5 주었다.
@@ -348,75 +397,71 @@ def make_layers(cfg, batch_norm=False):
 https://github.com/CryptoSalamander/pytorch_paper_implementation/tree/master/vgg
 
 ```python
+'''VGG11/13/16/19 in Pytorch.'''
+
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-import math
 
-class VGG(nn.Module):
-    def __init__(self, config, num_classes=1000, cifar=False):
-        super(VGG, self).__init__()
-        self.features = make_layer(config)
-        
-        # ImageNet
-        self.classifier = nn.Sequential(
-            nn.Linear(512 * 7 * 7, 4096),
-            nn.ReLU(),
-            nn.Dropout(0.5),
-            nn.Linear(4096, 4096),
-            nn.ReLU(),
-            nn.Dropout(0.5),
-            nn.Linear(4096, num_classes)  
-        )
-        if cifar:
-            self.classifier = nn.Sequential(
-                nn.Dropout(0.5),
-                nn.Linear(512, 512),
-                nn.ReLU(True),
-                nn.Dropout(0.5),
-                nn.Linear(512, 512),
-                nn.ReLU(True),
-                nn.Linear(512, 10)  
-            ) 
-        
-    def forward(self, x):
-        out = self.features(x)
-        out = torch.flatten(out,1)
-        out = self.classifier(out)
-        return out
-    
-
-    
 cfg = {
-    'A': [64, 'M', 128, 'M', 256, 256, 'M', 512, 512, 'M', 512, 512, 'M'],
-    'B': [64, 64, 'M', 128, 128, 'M', 256, 256, 'M', 512, 512, 'M', 512, 512, 'M'],
-    'D': [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 'M', 512, 512, 512, 'M', 512, 512, 512, 'M'],
-    'E': [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 256, 'M', 512, 512, 512, 512, 'M', 512, 512, 512, 512, 'M'],
+    'A' : [64,     'M', 128,      'M', 256, 256,           'M', 512, 512,           'M', 512, 512,           'M'],
+    'B' : [64, 64, 'M', 128, 128, 'M', 256, 256,           'M', 512, 512,           'M', 512, 512,           'M'],
+    'D' : [64, 64, 'M', 128, 128, 'M', 256, 256, 256,      'M', 512, 512, 512,      'M', 512, 512, 512,      'M'],
+    'E' : [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 256, 'M', 512, 512, 512, 512, 'M', 512, 512, 512, 512, 'M']
 }
 
-def make_layer(config):
+class VGG(nn.Module):
+
+    def __init__(self, features, num_class=100):
+        super().__init__()
+        self.features = features
+
+        self.classifier = nn.Sequential(
+            nn.Linear(512, 4096),
+            nn.ReLU(inplace=True),
+            nn.Dropout(),
+            nn.Linear(4096, 4096),
+            nn.ReLU(inplace=True),
+            nn.Dropout(),
+            nn.Linear(4096, num_class)
+        )
+
+    def forward(self, x):
+        output = self.features(x)
+        output = output.view(output.size()[0], -1)
+        output = self.classifier(output)
+
+        return output
+
+def make_layers(cfg, batch_norm=False):
     layers = []
-    in_planes = 3
-    for value in config:
-        if value == "M":
-            layers.append(nn.MaxPool2d(kernel_size=2, stride=2))
-        else:
-            layers.append(nn.Conv2d(in_planes, value, kernel_size=3, padding=1))
-            layers.append(nn.ReLU())
-            in_planes = value
+
+    input_channel = 3
+    for l in cfg:
+        if l == 'M':
+            layers += [nn.MaxPool2d(kernel_size=2, stride=2)]
+            continue
+
+        layers += [nn.Conv2d(input_channel, l, kernel_size=3, padding=1)]
+
+        if batch_norm:
+            layers += [nn.BatchNorm2d(l)]
+
+        layers += [nn.ReLU(inplace=True)]
+        input_channel = l
+
     return nn.Sequential(*layers)
 
-def VGG11(cifar=False):
-    return VGG(config = cfg['A'], cifar = cifar)
+def vgg11_bn():
+    return VGG(make_layers(cfg['A'], batch_norm=True))
 
-def VGG13(cifar=False):
-    return VGG(config = cfg['B'], cifar = cifar)
+def vgg13_bn():
+    return VGG(make_layers(cfg['B'], batch_norm=True))
 
-def VGG16(cifar=False):
-    return VGG(config = cfg['D'], cifar = cifar)
+def vgg16_bn():
+    return VGG(make_layers(cfg['D'], batch_norm=True))
 
-def VGG19(cifar=False):
-    return VGG(config = cfg['E'], cifar = cifar)
+def vgg19_bn():
+    return VGG(make_layers(cfg['E'], batch_norm=True))
 ```
 
 
@@ -428,3 +473,401 @@ def VGG19(cifar=False):
 ## 3. ResNet
 
 https://github.com/yunjey/pytorch-tutorial/blob/master/tutorials/02-intermediate/deep_residual_network/main.py
+
+* 네트워크가 깊어질수록 성능이 좋아짐 => 깊게하면 무조건 성능이 좋아질까?
+  * 20층보다 56층의 네트워크가 더 나쁜 성능 -> Residual Block
+
+
+
+![img](https://cdn.datamaker.io/django-rdproject/uploads/2020/09/22/prev_cnn_vs_residual_learning.png)
+
+* 기존의 신경망 : 입력값 x => H(x)
+* Residual Learning :  x => F(x)+x
+  * 출력 결과를 H(x)과 입력값의 차이로 설정 = H(x)-x = F(x) (잔차)
+  * H(x) = F(x)+x
+  * 지름길을 통해 i층의 입력값 x를 (i+r)층의 출력값 F(x)에 더하는 연산만 추가되기 떄문에 파라미터가 따로 필요 없어진다. = Identity Mapping
+* VGG 구조와 유사.  VGG-19에 conv 층 추가해서 깊게한 후, shortcut 추가
+
+![img](https://cdn.datamaker.io/django-rdproject/uploads/2020/09/22/resnet_34_layer.png)
+
+* Plain network, residual network
+* 실선 : 입력으로 들어온 특성맵의 크기를 변화시키지 않도록 Stride와 Zero Padding을 1로 하고 (1x1) 필터를 사용하는 shortcut
+* 점선 :  특성맵의 크기를 줄일때 사용되는 shortcut. 합성곱 필터의 깊이가 두배가 되는 시점에 사용
+* 특징
+  * Convolution layer는 3x3
+  * 복잡도를 줄이기 위해 max-pooling, hidden fc, dropout등 사용 안함
+  * 출력 feature-map 크기가 같은 경우, 해당 모든 layer는 모두 동일한 수의 filter로 설정
+    * 절반이 되는 될 때에는, layer의 연산량 보존을 위해 filter의 개수를 2배로 늘림
+    * 크기를 줄일때는 pooling대신에 stride=2
+  * Residual network는 2개의 conv layer마다 skip connection 연결
+* Plain network는 34-layer가 18-layer보다 안좋지만, Residual network는 34-layer가 더 좋았음
+
+
+
+```python
+import torch
+import torch.nn as nn
+import torchvision
+import torchvision.transforms as transforms
+
+
+# Device configuration
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+# Hyper-parameters
+num_epochs = 80
+batch_size = 100
+learning_rate = 0.001
+
+# Image preprocessing modules
+transform = transforms.Compose([
+    transforms.Pad(4),
+    transforms.RandomHorizontalFlip(),
+    transforms.RandomCrop(32),
+    transforms.ToTensor()])
+
+# CIFAR-10 dataset
+train_dataset = torchvision.datasets.CIFAR10(root='../../data/',
+                                             train=True, 
+                                             transform=transform,
+                                             download=True)
+
+test_dataset = torchvision.datasets.CIFAR10(root='../../data/',
+                                            train=False, 
+                                            transform=transforms.ToTensor())
+
+# Data loader
+train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
+                                           batch_size=batch_size,
+                                           shuffle=True)
+
+test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
+                                          batch_size=batch_size,
+                                          shuffle=False)
+```
+
+
+
+```python
+"""resnet in pytorch
+
+
+
+[1] Kaiming He, Xiangyu Zhang, Shaoqing Ren, Jian Sun.
+
+    Deep Residual Learning for Image Recognition
+    https://arxiv.org/abs/1512.03385v1
+"""
+
+import torch
+import torch.nn as nn
+
+# Block 정의 - 2가지 Basic Block, BottleNeck
+class BasicBlock(nn.Module):
+    """Basic Block for resnet 18 and resnet 34
+
+    """
+
+    #BasicBlock and BottleNeck block
+    #have different output size
+    #we use class attribute expansion
+    #to distinct
+    expansion = 1
+
+    def __init__(self, in_channels, out_channels, stride=1):
+        super().__init__()
+
+        #residual function
+        self.residual_function = nn.Sequential(
+            nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=stride, padding=1, bias=False),
+            # stride를 통해 너비와 높이 조정
+            nn.BatchNorm2d(out_channels),
+            nn.ReLU(inplace=True),
+            # stride = 1, padding = 1이므로, 너비와 높이는 항시 유지됨
+            nn.Conv2d(out_channels, out_channels * BasicBlock.expansion, kernel_size=3, padding=1, bias=False),
+            nn.BatchNorm2d(out_channels * BasicBlock.expansion)
+        )
+
+        #shortcut
+        # x를 그대로 더해주기 위함
+        self.shortcut = nn.Sequential()
+
+        #the shortcut output dimension is not the same with residual function
+        #use 1*1 convolution to match the dimension
+        # 만약 size가 안맞아 합연산이 불가하다면, 연산 가능하도록 모양을 맞춰줌
+        if stride != 1 or in_channels != BasicBlock.expansion * out_channels:
+            self.shortcut = nn.Sequential(
+                nn.Conv2d(in_channels, out_channels * BasicBlock.expansion, kernel_size=1, stride=stride, bias=False),
+                nn.BatchNorm2d(out_channels * BasicBlock.expansion)
+            )
+
+    def forward(self, x):
+        return nn.ReLU(inplace=True)(self.residual_function(x) + self.shortcut(x))
+
+class BottleNeck(nn.Module):
+    """Residual block for resnet over 50 layers
+    	더 깊은 레이어 구조에서 사용
+    """
+    expansion = 4
+    def __init__(self, in_channels, out_channels, stride=1):
+        super().__init__()
+        self.residual_function = nn.Sequential(
+            #첫 Convolution은 너비와 높이 downsampling
+            nn.Conv2d(in_channels, out_channels, kernel_size=1, bias=False),
+            nn.BatchNorm2d(out_channels),
+            nn.ReLU(inplace=True),
+            
+            nn.Conv2d(out_channels, out_channels, stride=stride, kernel_size=3, padding=1, bias=False),
+            nn.BatchNorm2d(out_channels),
+            nn.ReLU(inplace=True),
+            
+            nn.Conv2d(out_channels, out_channels * BottleNeck.expansion, kernel_size=1, bias=False),
+            nn.BatchNorm2d(out_channels * BottleNeck.expansion),
+        )
+
+        self.shortcut = nn.Sequential()
+
+        if stride != 1 or in_channels != out_channels * BottleNeck.expansion:
+            self.shortcut = nn.Sequential(
+                nn.Conv2d(in_channels, out_channels * BottleNeck.expansion, stride=stride, kernel_size=1, bias=False),
+                nn.BatchNorm2d(out_channels * BottleNeck.expansion)
+            )
+
+    def forward(self, x):
+        return nn.ReLU(inplace=True)(self.residual_function(x) + self.shortcut(x))
+
+# CIFAR100 -> num_classes=100
+class ResNet(nn.Module):
+
+    def __init__(self, block, num_block, num_classes=100):
+        super().__init__()
+		
+        # RGB 3개 채널에서 64개의 Kernel 사용 (논문 참고)
+        self.in_channels = 64
+		
+        # conv1 파트
+        self.conv1 = nn.Sequential(
+            nn.Conv2d(3, 64, kernel_size=3, padding=1, bias=False),
+            nn.BatchNorm2d(64),
+            nn.ReLU(inplace=True))
+        #we use a different inputsize than the original paper
+        #so conv2_x's stride is 1
+        self.conv2_x = self._make_layer(block, 64, num_block[0], 1)
+        # stride = 1
+        self.conv3_x = self._make_layer(block, 128, num_block[1], 2)
+        self.conv4_x = self._make_layer(block, 256, num_block[2], 2)
+        self.conv5_x = self._make_layer(block, 512, num_block[3], 2)
+        self.avg_pool = nn.AdaptiveAvgPool2d((1, 1))
+        self.fc = nn.Linear(512 * block.expansion, num_classes)
+
+    # 다양한 Architecture 생성을 위해 make_layer로 Sequential 생성 
+    def _make_layer(self, block, out_channels, num_blocks, stride):
+        """make resnet layers(by layer i didnt mean this 'layer' was the
+        same as a neuron netowork layer, ex. conv layer), one layer may
+        contain more than one residual block
+
+        Args:
+            block: block type, basic block or bottle neck block 블럭 타입
+            out_channels: output depth channel number of this layer 출력 채널
+            num_blocks: how many blocks per layer 레이어당 블럭 수
+            stride: the stride of the first block of this layer 첫 블럭의 stride
+
+        Return:
+            return a resnet layer
+        """
+
+        # we have num_block blocks per layer, the first block
+        # could be 1 or 2, other blocks would always be 1
+        # layer 앞부분에서만 크기를 절반으로 줄이므로, 아래와 같은 구조
+        strides = [stride] + [1] * (num_blocks - 1)
+        layers = []
+        for stride in strides:
+            layers.append(block(self.in_channels, out_channels, stride))
+            self.in_channels = out_channels * block.expansion
+
+        return nn.Sequential(*layers)
+
+    def forward(self, x):
+        output = self.conv1(x)
+        output = self.conv2_x(output)
+        output = self.conv3_x(output)
+        output = self.conv4_x(output)
+        output = self.conv5_x(output)
+        output = self.avg_pool(output)
+        output = output.view(output.size(0), -1)
+        output = self.fc(output)
+
+        return output
+
+def resnet18():
+    """ return a ResNet 18 object
+    """
+    return ResNet(BasicBlock, [2, 2, 2, 2])
+
+def resnet34():
+    """ return a ResNet 34 object
+    """
+    return ResNet(BasicBlock, [3, 4, 6, 3])
+
+def resnet50():
+    """ return a ResNet 50 object
+    """
+    return ResNet(BottleNeck, [3, 4, 6, 3])
+
+def resnet101():
+    """ return a ResNet 101 object
+    """
+    return ResNet(BottleNeck, [3, 4, 23, 3])
+
+def resnet152():
+    """ return a ResNet 152 object
+    """
+    return ResNet(BottleNeck, [3, 8, 36, 3])
+```
+
+* Train
+
+```python
+import torchvision
+import torch
+import torch.nn as nn
+import torch.optim as optim
+import torchvision.transforms as transforms
+from resnet import ResNet18, ResNet34, ResNet50, ResNet101, ResNet152
+import os
+import torchvision.models as models
+
+# Simple Learning Rate Scheduler
+def lr_scheduler(optimizer, epoch):
+    lr = learning_rate
+    if epoch >= 50:
+        lr /= 10
+    if epoch >= 100:
+        lr /= 10
+    for param_group in optimizer.param_groups:
+        param_group['lr'] = lr
+
+# Xavier         
+def init_weights(m):
+    if isinstance(m, nn.Linear):
+        torch.nn.init.xavier_uniform(m.weight)
+        m.bias.data.fill_(0.01)
+        
+transform_train = transforms.Compose([
+    transforms.RandomCrop(32, padding=4),
+    transforms.RandomHorizontalFlip(),
+    transforms.ToTensor(),
+])
+
+transform_test = transforms.Compose([
+    transforms.ToTensor(),
+])
+
+train_dataset = torchvision.datasets.CIFAR10(root='./data', train=True, download=True, transform=transform_train)
+test_dataset = torchvision.datasets.CIFAR10(root='./data', train=False, download=True, transform=transform_test)
+
+train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=256, shuffle=True, num_workers=8)
+test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=256, shuffle=False, num_workers=8)
+
+device = 'cuda'
+model = ResNet50()
+# ResNet18, ResNet34, ResNet50, ResNet101, ResNet152 중에 택일하여 사용
+
+model.apply(init_weights)
+model = model.to(device)
+
+learning_rate = 0.1
+num_epoch = 150
+model_name = 'model.pth'
+
+loss_fn = nn.CrossEntropyLoss()
+optimizer = optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9, weight_decay=0.0001)
+
+train_loss = 0
+valid_loss = 0
+correct = 0
+total_cnt = 0
+best_acc = 0
+
+# Train
+for epoch in range(num_epoch):
+    print(f"====== { epoch+1} epoch of { num_epoch } ======")
+    model.train()
+    lr_scheduler(optimizer, epoch)
+    train_loss = 0
+    valid_loss = 0
+    correct = 0
+    total_cnt = 0
+    # Train Phase
+    for step, batch in enumerate(train_loader):
+        #  input and target
+        batch[0], batch[1] = batch[0].to(device), batch[1].to(device)
+        optimizer.zero_grad()
+        
+        logits = model(batch[0])
+        loss = loss_fn(logits, batch[1])
+        loss.backward()
+        
+        optimizer.step()
+        train_loss += loss.item()
+        _, predict = logits.max(1)
+        
+        total_cnt += batch[1].size(0)
+        correct +=  predict.eq(batch[1]).sum().item()
+        
+        if step % 100 == 0 and step != 0:
+            print(f"\n====== { step } Step of { len(train_loader) } ======")
+            print(f"Train Acc : { correct / total_cnt }")
+            print(f"Train Loss : { loss.item() / batch[1].size(0) }")
+            
+    correct = 0
+    total_cnt = 0
+    
+# Test Phase
+    with torch.no_grad():
+        model.eval()
+        for step, batch in enumerate(test_loader):
+            # input and target
+            batch[0], batch[1] = batch[0].to(device), batch[1].to(device)
+            total_cnt += batch[1].size(0)
+            logits = model(batch[0])
+            valid_loss += loss_fn(logits, batch[1])
+            _, predict = logits.max(1)
+            correct += predict.eq(batch[1]).sum().item()
+        valid_acc = correct / total_cnt
+        print(f"\nValid Acc : { valid_acc }")    
+        print(f"Valid Loss : { valid_loss / total_cnt }")
+
+        if(valid_acc > best_acc):
+            best_acc = valid_acc
+            torch.save(model, model_name)
+            print("Model Saved!")
+```
+
+```python
+# Train-Validation Progress
+num_epochs=params_train["num_epochs"]
+
+# plot loss progress
+plt.title("Train-Val Loss")
+plt.plot(range(1,num_epochs+1),loss_hist["train"],label="train")
+plt.plot(range(1,num_epochs+1),loss_hist["val"],label="val")
+plt.ylabel("Loss")
+plt.xlabel("Training Epochs")
+plt.legend()
+plt.show()
+
+# plot accuracy progress
+plt.title("Train-Val Accuracy")
+plt.plot(range(1,num_epochs+1),metric_hist["train"],label="train")
+plt.plot(range(1,num_epochs+1),metric_hist["val"],label="val")
+plt.ylabel("Accuracy")
+plt.xlabel("Training Epochs")
+plt.legend()
+plt.show()
+```
+
+
+
+
+
