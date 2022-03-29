@@ -6,8 +6,6 @@
 
 ## 1. Alexnet
 
-![image-20220329004225685](md-images/image-20220329004225685.png)![image-20220329010208676](md-images/image-20220329010208676.png)
-
 ![img](https://t1.daumcdn.net/cfile/tistory/99FEB93C5C80B5192E)
 
 ![img](https://blog.kakaocdn.net/dn/J29tU/btq8avdCrY7/aIWPxEtLDWMEZidf4Hr9O1/img.png)
@@ -97,30 +95,6 @@
    \- activation : Softmax
 
 ```python
-import torch
-import torch.nn as nn
-import torch.optim as optim
-import torch.nn.functional as F
-from torch.utils import data
-import torchvision.datasets as datasets
-import torchvision.transforms as transforms
-
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-device   # cuda 지정
-```
-
-```python
-# 논문 5. Details of learning 참고 parameter
-batch_size = 128
-momentum = 0.9
-lr_decay = 0.0005
-lr_init = 0.01
-image_dim = 227    # pixels
-num_classes = 1000   # 1000개의 class 지정
-device_ids = [0, 1, 2, 3]
-```
-
-```python
 class AlexNet(nn.Module):
   def __init__(self, num_classes=1000):
     super().__init__()
@@ -195,56 +169,6 @@ class AlexNet(nn.Module):
       x = x.view(-1, 256*6*6)   # keras의 reshape (텐서 크기 2d 변경)
       return self.classifier(x)   # fc   
 ```
-
-```python
-if __name__== '__main__':
-  seed = torch.initial_seed()  # seed value 설정
-  model = AlexNet(num_classes=num_classes).to(device)
-  model = torch.nn.parallel.DataParallel(model, divice_ids=device_ids)  # 모델 설정
-  print(model)
-
-  # dataset, data loader 설정
-  dataset = datasets.ImageFolder(TRAIN_IMG_DIR, transforms.Compose([
-      transforms.CenterCrop(IMAGE_DIM),
-      transforms.ToTensor(),
-      transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-  ]))
-
-  dataloader = data.DataLoader(
-      dataset,
-      shuffle=True,
-      pin_memory=True,
-      num_workers=8,
-      drop_last=True,
-      batch_size=batch_size)
-
-  # optimizer
-  optimizer = optim.SGD(
-      params = model.parameters(),
-      lr = lr_init,
-      momentum = momentum,
-      weight_decay = lr_decay  # lr 점점 감소
-  )
-
-  lr_scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=30, gamma=0.1)   # lr 점점 감소
-
-  # training
-  total_steps=1
-  for epoch in range(num_epochs):
-    lr_scheduler.step()
-
-    for imgs, classes in dataloader:
-      imgs, classes = imgs.to(device), classes.to(device)
-
-      output = alexnet(imgs)
-      loss = F.cross_entropy(output, classes)  # loss 계산
-
-      optimizer.zero_grad()
-      loss.backward()  # backpropa
-      optimizer.step()  # parameter update
-```
-
-
 
 
 
